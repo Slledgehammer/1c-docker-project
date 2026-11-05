@@ -1,4 +1,4 @@
-name: Build and Push 1C Docker Image
+name: Build and Deploy 1C Docker Image
 
 on:
   push:
@@ -31,3 +31,20 @@ jobs:
         context: .
         push: true
         tags: ghcr.io/${{ steps.lowercase.outputs.owner }}/1c-server:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy to server via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        envs: GHCR_TOKEN,GITHUB_ACTOR
+        script: |
+          export GHCR_TOKEN="${{ secrets.GHCR_TOKEN }}"
+          export GITHUB_ACTOR="${{ github.actor }}"
+          cd ~/deploy
+          ./deploy.sh
